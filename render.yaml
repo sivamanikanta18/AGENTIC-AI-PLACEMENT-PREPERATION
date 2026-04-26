@@ -1,0 +1,84 @@
+# Render Infrastructure as Code Configuration
+# This file tells Render how to deploy your services
+# Docs: https://render.com/docs/infrastructure-as-code
+
+services:
+  # Backend Web Service (Node.js + Express + Socket.io)
+  - type: web
+    name: prepsense-ai-backend
+    runtime: node
+    region: oregon  # Choose: oregon, ohio, virginia, frankfurt, singapore
+    plan: starter  # $7/month - upgrade to 'standard' for production
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000  # Render assigns this automatically
+      - key: JWT_SECRET
+        generateValue: true  # Render will generate a random value
+      - key: MONGODB_URI
+        sync: false  # You will set this manually in dashboard
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false  # Set manually - sensitive
+      - key: GOOGLE_API_KEY
+        sync: false  # Optional - set if using Google AI
+      - key: OPENAI_API_KEY
+        sync: false  # Optional - set if using OpenAI
+      - key: CLIENT_URL
+        fromService:
+          name: prepsense-ai-frontend
+          type: static
+          property: url
+      - key: ALLOWED_ORIGINS
+        fromService:
+          name: prepsense-ai-frontend
+          type: static
+          property: url
+    autoDeploy: true  # Deploy on every push to main
+    healthCheckPath: /api/health
+    disk:
+      name: tmp
+      mountPath: /tmp
+      sizeGB: 1
+
+  # Frontend Static Site (React + Vite)
+  - type: static
+    name: prepsense-ai-frontend
+    runtime: static
+    region: oregon
+    plan: starter  # FREE for static sites
+    buildCommand: cd frontend && npm install && npm run build
+    publishDirectory: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: prepsense-ai-backend
+          type: web
+          property: url
+          value: https://prepsense-ai-backend.onrender.com/api
+    autoDeploy: true
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://prepsense-ai-backend.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+# Optional: Redis for caching (can add later when scaling)
+# - type: redis
+#   name: prepsense-ai-redis
+#   region: oregon
+#   plan: free
+#   maxmemoryPolicy: allkeys-lru

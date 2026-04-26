@@ -17,6 +17,35 @@ async function ensureProblemsExist() {
   }
 }
 
+// Get database stats - problems are stored in MongoDB
+router.get('/stats', async (req, res) => {
+  try {
+    const total = await CodingProblem.countDocuments();
+    const byDifficulty = await CodingProblem.aggregate([
+      { $group: { _id: '$difficulty', count: { $sum: 1 } } }
+    ]);
+    const byCategory = await CodingProblem.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+    
+    res.json({
+      totalProblems: total,
+      byDifficulty: byDifficulty.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      byCategory: byCategory.reduce((acc, item) => {
+        acc[item._id] = item.count;
+        return acc;
+      }, {}),
+      storage: 'MongoDB Database - Persistent',
+      seeding: total > 0 ? 'Not needed - problems exist' : 'Required on first run'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get personalized problems based on resume analysis
 router.get('/personalized', auth, async (req, res) => {
   try {

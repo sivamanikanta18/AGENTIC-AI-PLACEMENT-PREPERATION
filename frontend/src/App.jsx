@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import useAuthStore from './store/authStore'
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -27,31 +28,33 @@ function App() {
   }, [isAuthenticated, refreshUser])
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to="/dashboard" />} />
-      <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
-      <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+    <ErrorBoundary>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={!isAuthenticated ? <LandingPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
 
-      {/* Protected Routes */}
-      <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/resume" element={<ResumeUploadPage />} />
-        <Route path="/interview" element={<InterviewConfigPage />} />
-        <Route path="/interview/session" element={<InterviewPage />} />
-        <Route path="/feedback/:interviewId" element={<FeedbackPage />} />
-        <Route path="/coding" element={<CodingPage />} />
-        <Route path="/coding/:problemId" element={<CodingPage />} />
-        <Route path="/roadmap" element={<RoadmapPage />} />
-        <Route path="/gamification" element={<GamificationPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/debate" element={<DebatePage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-      </Route>
+        {/* Protected Routes */}
+        <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/resume" element={<ResumeUploadPage />} />
+          <Route path="/interview" element={<InterviewConfigPage />} />
+          <Route path="/interview/session" element={<InterviewPage />} />
+          <Route path="/feedback/:interviewId" element={<FeedbackPage />} />
+          <Route path="/coding" element={<CodingPage />} />
+          <Route path="/coding/:problemId" element={<CodingPage />} />
+          <Route path="/roadmap" element={<RoadmapPage />} />
+          <Route path="/gamification" element={<GamificationPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/debate" element={<DebatePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </ErrorBoundary>
   )
 }
 

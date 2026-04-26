@@ -3,9 +3,12 @@ const OpenAI = require('openai');
 // AI Provider Configuration
 const AI_PROVIDER = process.env.AI_PROVIDER || 'groq';
 const MOCK_MODE = false; // Always use real AI and database
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-console.log('[AI Service] Provider:', AI_PROVIDER.toUpperCase());
-console.log('[AI Service] Using real AI and database data only');
+// Silent in production
+if (!IS_PRODUCTION) {
+  // console.log('[AI Service] Provider:', AI_PROVIDER.toUpperCase());
+}
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -38,8 +41,10 @@ async function callGeminiAPI(prompt, temperature = 0.7) {
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[Gemini API Error]:', response.status, errorText);
-    throw new Error(`Gemini API error ${response.status}: ${errorText}`);
+    if (!IS_PRODUCTION) {
+      // console.error('[Gemini API Error]:', response.status);
+    }
+    throw new Error(`Gemini API error ${response.status}`);
   }
   
   const data = await response.json();
@@ -64,8 +69,6 @@ async function callGroqAPI(prompt, temperature = 0.7, retries = 2) {
   for (const model of models) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        console.log(`[Groq] Trying model: ${model}, attempt: ${attempt + 1}`);
-        
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -85,16 +88,11 @@ async function callGroqAPI(prompt, temperature = 0.7, retries = 2) {
         
         if (response.ok) {
           const data = await response.json();
-          console.log(`[Groq] Success with model: ${model}`);
           return data.choices?.[0]?.message?.content || '';
         }
         
-        const errorText = await response.text();
-        console.error(`[Groq API Error ${response.status}]:`, errorText);
-        
         // If rate limited, wait and retry
         if (response.status === 429 && attempt < retries) {
-          console.log(`[Groq] Rate limited, waiting ${(attempt + 1) * 2}s before retry...`);
           await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 2000));
           continue;
         }
@@ -103,7 +101,6 @@ async function callGroqAPI(prompt, temperature = 0.7, retries = 2) {
         break;
         
       } catch (error) {
-        console.error(`[Groq] Attempt ${attempt + 1} failed:`, error.message);
         if (attempt < retries) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -117,18 +114,14 @@ async function callGroqAPI(prompt, temperature = 0.7, retries = 2) {
 // Unified AI call function
 async function callAI(prompt, temperature = 0.7, retries = 2) {
   if (MOCK_MODE) {
-    console.log('[MOCK MODE] Skipping AI call');
     return null;
   }
   
   if (AI_PROVIDER === 'google') {
-    console.log('[AI] Using Google Gemini');
     return await callGeminiAPI(prompt, temperature);
   } else if (AI_PROVIDER === 'groq') {
-    console.log('[AI] Using Groq API with fallback models');
     return await callGroqAPI(prompt, temperature, retries);
   } else {
-    console.log('[AI] Using OpenAI');
     const completion = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [{ role: 'user', content: prompt }],

@@ -52,35 +52,22 @@ function RoadmapContent() {
 
   useEffect(() => {
     setMounted(true)
-    console.log('[RoadmapPage] Component mounted')
     
     const loadRoadmap = async () => {
       try {
         setError(null)
-        console.log('[RoadmapPage] Fetching roadmap...')
         const roadmap = await fetchCurrentRoadmap()
-        console.log('[RoadmapPage] Roadmap fetched:', roadmap ? 'SUCCESS' : 'NO ROADMAP')
-        if (roadmap) {
-          console.log('[RoadmapPage] Roadmap ID:', roadmap._id)
-          console.log('[RoadmapPage] Tasks count:', roadmap.schedule?.dailyPlan?.[0]?.tasks?.length || 0)
-        }
       } catch (err) {
-        console.error('[RoadmapPage] Failed to load roadmap:', err)
         setError('Failed to load roadmap: ' + (err.message || 'Unknown error'))
       }
     }
     loadRoadmap()
   }, [fetchCurrentRoadmap])
 
-  // Debug logging
+  // State tracking for UI updates
   useEffect(() => {
-    console.log('[RoadmapPage] State update:', { 
-      hasRoadmap: !!currentRoadmap, 
-      isLoading: isRoadmapLoading, 
-      hasError: !!error,
-      isMounted: mounted 
-    })
-  }, [currentRoadmap, isRoadmapLoading, error, mounted])
+    // State updates handled by store
+  }, [currentRoadmap, isRoadmapLoading, error])
 
   const handleGenerate = async () => {
     try {
@@ -102,16 +89,7 @@ function RoadmapContent() {
 
   // Open task detail modal
   const handleStartTask = (day, task, dayIndex, taskIndex) => {
-    console.log('[RoadmapPage] Opening task modal:', { 
-      dayNumber: day?.day, 
-      taskTitle: task?.title, 
-      dayIndex, 
-      taskIndex,
-      hasRoadmap: !!currentRoadmap 
-    })
-    
     if (!day || !task) {
-      console.error('[RoadmapPage] Cannot open task - missing day or task data')
       toast.error('Task data not available')
       return
     }
@@ -119,21 +97,16 @@ function RoadmapContent() {
     setSelectedTask({ day, task, dayIndex, taskIndex })
     setActiveTab('explanation')
     setShowTaskModal(true)
-    console.log('[RoadmapPage] Task modal opened')
   }
   
   // Actually complete the task
   const handleCompleteTask = async () => {
-    console.log('[RoadmapPage] Attempting to complete task...')
-    
     if (!selectedTask) {
-      console.error('[RoadmapPage] No task selected')
       toast.error('No task selected')
       return
     }
     
     if (!currentRoadmap) {
-      console.error('[RoadmapPage] No roadmap available')
       toast.error('Roadmap not available')
       return
     }
@@ -141,18 +114,10 @@ function RoadmapContent() {
     const { day, task, dayIndex, taskIndex } = selectedTask
     const taskKey = `${dayIndex}-${taskIndex}`
     
-    console.log('[RoadmapPage] Completing task:', { 
-      roadmapId: currentRoadmap._id, 
-      dayNumber: day.day, 
-      taskIndex,
-      taskTitle: task.title 
-    })
-    
     setCompletingTask(taskKey)
     
     try {
       const result = await completeTask(currentRoadmap._id, day.day, taskIndex)
-      console.log('[RoadmapPage] Task completed successfully:', result)
       
       // Show streak message if available
       if (result?.streakMessage) {
@@ -167,8 +132,6 @@ function RoadmapContent() {
       setShowTaskModal(false)
       setSelectedTask(null)
     } catch (error) {
-      console.error('[RoadmapPage] Complete task error:', error)
-      console.error('[RoadmapPage] Error details:', error.response?.data || error.message)
       toast.error('Failed to complete task: ' + (error.response?.data?.error || error.message || 'Unknown error'))
     } finally {
       setCompletingTask(null)
