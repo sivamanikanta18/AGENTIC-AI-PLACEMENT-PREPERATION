@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const UserActivity = require('../models/UserActivity');
 
 /**
@@ -132,7 +133,7 @@ class AnalyticsService {
     try {
       const activities = await UserActivity.aggregate([
         {
-          $match: { userId: new require('mongoose').Types.ObjectId(userId) }
+          $match: { userId: new mongoose.Types.ObjectId(userId) }
         },
         {
           $group: {
@@ -293,7 +294,7 @@ class AnalyticsService {
       
       // Get all activities
       const activities = await UserActivity.find({
-        userId: new require('mongoose').Types.ObjectId(userId),
+        userId: new mongoose.Types.ObjectId(userId),
         createdAt: { $gte: since }
       }).sort({ createdAt: -1 });
       

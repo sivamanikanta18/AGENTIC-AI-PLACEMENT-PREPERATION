@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const AnalyticsService = require('../utils/analyticsService');
@@ -153,7 +154,7 @@ router.get('/streak', auth, async (req, res) => {
     const activities = await UserActivity.aggregate([
       {
         $match: {
-          userId: new require('mongoose').Types.ObjectId(req.user._id),
+          userId: new mongoose.Types.ObjectId(req.user._id),
           createdAt: { $gte: since }
         }
       },
