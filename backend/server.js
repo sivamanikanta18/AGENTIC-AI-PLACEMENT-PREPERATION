@@ -64,19 +64,45 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // MongoDB Connection
+const LOCAL_MONGO_URI = 'mongodb://127.0.0.1:27017/prepsense_ai';
+
+const connectWithFallback = async (mongoURI) => {
+  try {
+    const conn = await mongoose.connect(mongoURI);
+    return { conn, uri: mongoURI };
+  } catch (err) {
+    const isAtlasUri = mongoURI.includes('mongodb+srv://');
+
+    if (!IS_PRODUCTION && isAtlasUri) {
+      console.warn('⚠️  Atlas connection failed, falling back to local MongoDB...');
+      console.warn(`   Reason: ${err.message}`);
+
+      const localConn = await mongoose.connect(LOCAL_MONGO_URI);
+      return { conn: localConn, uri: LOCAL_MONGO_URI, fallback: true };
+    }
+
+    throw err;
+  }
+};
+
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/prepsense_ai';
-    const conn = await mongoose.connect(mongoURI);
-    console.log('✅ MongoDB Connected:', conn.connection.host);
-    
+    const mongoURI = process.env.MONGODB_URI || LOCAL_MONGO_URI;
+    const { conn, fallback } = await connectWithFallback(mongoURI);
+
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    if (fallback) {
+      console.log('ℹ️  Using local MongoDB for development because Atlas was unreachable');
+    }
+
     // Seed coding problems if empty
     await seedCodingProblems();
   } catch (err) {
     if (!IS_PRODUCTION) {
       console.error('❌ MongoDB Connection Error:', err.message);
-      console.log('⚠️  IP Whitelist Issue: Add your IP to MongoDB Atlas Network Access');
+      console.log('⚠️  If you intend to use MongoDB Atlas, verify the cluster URL and Network Access settings');
       console.log('   → https://cloud.mongodb.com → Network Access → Add IP Address');
+      console.log('   → Or start a local MongoDB instance on 127.0.0.1:27017');
     }
   }
 };

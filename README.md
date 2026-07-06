@@ -127,16 +127,15 @@ College students and fresh graduates struggle with: unpredictable interview ques
 ## Deployment & DevOps
 
 **Production Stack:**
-- **Backend**: Railway (Node.js web service) with auto-deploy from GitHub
+- **Backend**: Render (Node.js web service) with auto-deploy from GitHub
 - **Frontend**: Render (static site) with auto-deploy from GitHub
 - **Database**: MongoDB Atlas (free tier, M0 cluster)
 - **Version Control**: GitHub with branch-based CI/CD
-- **Infrastructure as Code**: `render.yaml` defines both frontend and backend services with cross-service environment variable linking
+- **Infrastructure as Code**: `render.yaml` defines the backend service and its deployment settings
 
 **Deployment Architecture:**
-- Railway backend exposes public HTTPS endpoint
-- Render frontend serves static SPA with API proxying to Railway backend
-- Environment variables auto-linked between services via Render's `fromService` syntax
+- Render backend exposes public HTTPS endpoint
+- Frontend points to the Render backend through `VITE_API_URL`
 - Auto-deploy on every Git push to main branch
 
 ## Project Impact & Metrics
@@ -191,6 +190,31 @@ npm run dev
 ```
 
 6. **Open browser:** Navigate to `http://localhost:5173`
+
+## Deploy Backend On Render
+
+1. Push this repository to GitHub.
+2. In Render, create a new **Web Service** and connect the GitHub repo.
+3. Set the root directory to `backend`.
+4. Use these commands:
+	- Build command: `npm install`
+	- Start command: `npm start`
+5. Add the environment variables:
+	- `NODE_ENV=production`
+	- `MONGODB_URI=<your MongoDB Atlas connection string>`
+	- `JWT_SECRET=<strong random secret, 32+ chars>`
+	- `AI_PROVIDER=groq` or `openai` or `google`
+	- `GROQ_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY` for the provider you choose
+	- `CLIENT_URL=<your frontend URL>`
+	- `ALLOWED_ORIGINS=<your frontend URL>`
+6. Deploy and verify `https://your-service.onrender.com/api/health` returns `{ "status": "OK" }`.
+7. Update the frontend `VITE_API_URL` to `https://your-service.onrender.com/api` and redeploy the frontend.
+
+### Render Notes
+
+- Do not hardcode `PORT`; Render injects it automatically.
+- The backend already listens on `process.env.PORT` and exposes `/api/health` for health checks.
+- Resume uploads are stored locally in `backend/uploads/resumes`; if you need persistent storage on Render, move uploads to cloud storage such as S3 or Cloudinary.
 
 ## API Endpoints
 

@@ -40,6 +40,20 @@ const upload = multer({
   }
 });
 
+const deleteFileIfExists = async (filePath) => {
+  if (!filePath) {
+    return;
+  }
+
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('Could not delete resume file:', filePath, error.message);
+    }
+  }
+};
+
 // Upload and analyze resume
 router.post('/upload', auth, upload.single('resume'), async (req, res) => {
   try {
@@ -120,6 +134,19 @@ router.post('/upload', auth, upload.single('resume'), async (req, res) => {
         resumeId: resume._id,
         confidenceScore: analysis.confidence_score
       }
+    );
+
+    // Keep only the latest resume for this user
+    const previousResumes = await Resume.find({
+      userId: req.user._id,
+      _id: { $ne: resume._id }
+    });
+
+    await Promise.all(
+      previousResumes.map(async (previousResume) => {
+        await deleteFileIfExists(previousResume.originalFile?.path);
+        await Resume.deleteOne({ _id: previousResume._id });
+      })
     );
 
     res.json({
